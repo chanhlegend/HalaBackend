@@ -5,37 +5,38 @@ dotenv.config();
 
 // Create transporter
 const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.EMAIL_PORT || '587'),
-    secure: false, // true for 465, false for other ports
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD,
-    },
+  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+  port: parseInt(process.env.EMAIL_PORT || '587'),
+  secure: false, // true for 465, false for other ports
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD,
+  },
 });
 
 // Verify transporter configuration
 transporter.verify((error, success) => {
-    if (error) {
-        console.error('❌ Email transporter error:', error);
-    } else {
-        console.log('✅ Email server is ready to send messages');
-    }
+  if (error) {
+    console.error('❌ Email transporter error:', error);
+  } else {
+    console.log('✅ Email server is ready to send messages');
+  }
 });
 
 /**
  * Send OTP verification email
  */
 export const sendOTPEmail = async (
-    email: string,
-    otp: string,
-    name: string
+  email: string,
+  otp: string,
+  name: string
 ): Promise<void> => {
-    const mailOptions = {
-        from: `"HalaConnect" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
-        to: email,
-        subject: 'Xác thực tài khoản HalaConnect',
-        html: `
+  console.log('OTP:', otp);
+  const mailOptions = {
+    from: `"HalaConnect" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+    to: email,
+    subject: 'Xác thực tài khoản HalaConnect',
+    html: `
       <!DOCTYPE html>
       <html>
         <head>
@@ -126,20 +127,20 @@ export const sendOTPEmail = async (
         </body>
       </html>
     `,
-    };
+  };
 
-    try {
-        await transporter.sendMail(mailOptions);
-        console.log(`✅ OTP email sent to ${email}`);
-    } catch (error) {
-        console.error('❌ Error sending OTP email:', error);
-        throw new Error('Failed to send OTP email');
-    }
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ OTP email sent to ${email}`);
+  } catch (error) {
+    console.error('❌ Error sending OTP email:', error);
+    throw new Error('Failed to send OTP email');
+  }
 };
 
 /**
  * Generate 4-digit OTP
  */
 export const generateOTP = (): string => {
-    return Math.floor(1000 + Math.random() * 9000).toString();
+  return Math.floor(1000 + Math.random() * 9000).toString();
 };

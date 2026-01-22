@@ -321,3 +321,117 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
         res.status(500).json({ error: 'Đã xảy ra lỗi khi đăng xuất' });
     }
 };
+
+/**
+ * Forgot password - Send OTP
+ * POST /auth/forgot-password
+ */
+export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            res.status(400).json({ error: 'Vui lòng cung cấp email' });
+            return;
+        }
+
+        const user = await User.findOne({ email: email.toLowerCase() });
+        if (!user) {
+            res.status(404).json({ error: 'Không tìm thấy tài khoản với email này' });
+            return;
+        }
+
+        // Generate OTP
+        const otp = generateOTP();
+        const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+        user.resetPasswordToken = otp;
+        user.resetPasswordExpires = otpExpires;
+        await user.save();
+
+        // Send OTP email
+        await sendOTPEmail(email, otp, user.name);
+
+        res.json({ message: 'Mã xác thực đã được gửi đến email của bạn' });
+    } catch (error) {
+        console.error('Forgot password error:', error);
+        res.status(500).json({ error: 'Đã xảy ra lỗi khi gửi mã xác thực' });
+    }
+};
+
+/**
+ * Verify Reset Password OTP
+ * POST /auth/verify-reset-otp
+ */
+export const verifyResetOTP = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { email, otp } = req.body;
+
+        if (!email || !otp) {
+            res.status(400).json({ error: 'Vui lòng cung cấp email và mã OTP' });
+            return;
+        }
+
+        const user = await User.findOne({
+            email: email.toLowerCase(),
+            resetPasswordToken: otp,
+            resetPasswordExpires: { $gt: Date.now() },
+        });
+
+        if (!user) {
+            res.status(400).json({ error: 'Mã OTP không chính xác hoặc đã hết hạn' });
+            return;
+        }
+
+        res.json({ message: 'Mã OTP hợp lệ' });
+    } catch (error) {
+        console.error('Verify reset OTP error:', error);
+        res.status(500).json({ error: 'Đã xảy ra lỗi khi xác thực mã OTP' });
+    }
+};
+
+/**
+ * Reset Password
+ * POST /auth/reset-password
+ */
+export const resetPassword = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { email, otp, newPassword } = req.body;
+
+        if (!email || !otp || !newPassword) {
+            res.status(400).json({ error: 'Vui lòng cung cấp đầy đủ thông tin' });
+            return;
+        }
+
+        if (newPassword.length < 6) {
+            res.status(400).json({ error: 'Mật khẩu phải có ít nhất 6 ký tự' });
+            return;
+        }
+
+        const user = await User.findOne({
+            email: email.toLowerCase(),
+            resetPasswordToken: otp,
+            resetPasswordExpires: { $gt: Date.now() },
+        });
+
+        if (!user) {
+            res.status(400).json({ error: 'Mã OTP không chính xác hoặc đã hết hạn' });
+            return;
+        }
+
+        // Hash new password
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+
+        // Clear reset token
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+
+        await user.save();
+
+        res.json({ message: 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.' });
+    } catch (error) {
+        console.error('Reset password error:', error);
+        res.status(500).json({ error: 'Đã xảy ra lỗi khi đặt lại mật khẩu' });
+    }
+};
