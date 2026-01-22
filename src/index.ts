@@ -2,8 +2,7 @@ import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import connectDB from './config/database';
-import authRoutes from './routes/authRoutes';
-import userRoutes from './routes/userRoutes';
+import route from './routes';
 
 // Load environment variables
 dotenv.config();
@@ -24,8 +23,7 @@ app.get('/', (req: Request, res: Response) => {
   res.json({ message: 'Welcome to HalaConnect API' });
 });
 
-app.use('/auth', authRoutes);
-app.use('/users', userRoutes);
+route(app);
 
 // Error handling middleware
 app.use((err: any, req: Request, res: Response) => {
