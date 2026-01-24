@@ -9,6 +9,8 @@ export interface IUser extends Document {
   coverPhoto?: string;
   bio?: string;
   dateOfBirth?: Date;
+  workplace?: string;
+  location?: string;
   isEmailVerified: boolean;
   emailVerificationOTP?: string;
   emailVerificationOTPExpires?: Date;
@@ -58,6 +60,14 @@ const userSchema: Schema = new Schema<IUser>(
     },
     dateOfBirth: {
       type: Date,
+    },
+    workplace: {
+      type: String,
+      maxlength: 100,
+    },
+    location: {
+      type: String,
+      maxlength: 100,
     },
     isEmailVerified: {
       type: Boolean,
