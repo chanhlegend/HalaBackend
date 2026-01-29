@@ -4,7 +4,10 @@ export enum NotificationType {
   FRIEND_REQUEST = 'friend_request',
   FRIEND_REQUEST_ACCEPTED = 'friend_request_accepted',
   LIKE = 'like',
+  LIKE_POST = 'like_post',
+  LIKE_COMMENT = 'like_comment',
   COMMENT = 'comment',
+  REPLY_COMMENT = 'reply_comment',
 }
 
 export interface INotification extends Document {
