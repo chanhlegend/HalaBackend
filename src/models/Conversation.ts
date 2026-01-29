@@ -4,9 +4,6 @@ export interface IConversation extends Document {
   participants: Types.ObjectId[];
   lastMessage?: string;
   lastMessageTime?: Date;
-  isGroup: boolean;
-  groupName?: string;
-  groupIcon?: string;
   createdAt: Date;
   updatedAt: Date;
 }

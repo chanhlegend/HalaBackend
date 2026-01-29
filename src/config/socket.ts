@@ -68,7 +68,6 @@ class SocketService {
     const socketId = this.userSockets.get(userId);
     if (socketId && this.io) {
       this.io.to(socketId).emit(event, data);
-      console.log(`Emitted ${event} to user ${userId}`);
     }
   }
 
