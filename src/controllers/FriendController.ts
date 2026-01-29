@@ -3,6 +3,7 @@ import Friend from '../models/Friend';
 import FriendRequest, { FriendRequestStatus } from '../models/FriendRequest';
 import User from '../models/User';
 import Notification, { NotificationType } from '../models/Notification';
+import Conversation from '../models/Conversation';
 import socketService from '../config/socket';
 
 export const getFriendsList = async (req: Request, res: Response) => {
@@ -125,6 +126,18 @@ export const acceptFriendRequest = async (req: Request, res: Response) => {
         const friend2 = new Friend({ user: request.receiver, friend: request.sender });
 
         await Promise.all([friend1.save(), friend2.save()]);
+
+        // Create conversation between the two users
+        const existingConversation = await Conversation.findOne({
+            participants: { $all: [request.sender, request.receiver] }
+        });
+
+        if (!existingConversation) {
+            const conversation = new Conversation({
+                participants: [request.sender, request.receiver],
+            });
+            await conversation.save();
+        }
 
         // Get accepter info for notification
         const accepter = await User.findById(userId).select('name email avatar');
