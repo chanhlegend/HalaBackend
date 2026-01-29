@@ -281,3 +281,56 @@ export const searchUserByEmail = async (req: Request, res: Response) => {
         res.status(500).json({ message: 'Error searching user', error });
     }
 };
+
+// Get friendship status with a specific user
+export const getFriendshipStatus = async (req: Request, res: Response) => {
+    try {
+        const userId = (req as any).user.userId;
+        const { targetUserId } = req.params;
+
+        if (userId === targetUserId) {
+            return res.json({ status: 'self' });
+        }
+
+        // Check friendship status
+        const isFriend = await Friend.findOne({ user: userId, friend: targetUserId });
+        const sentRequest = await FriendRequest.findOne({ sender: userId, receiver: targetUserId, status: FriendRequestStatus.PENDING });
+        const receivedRequest = await FriendRequest.findOne({ sender: targetUserId, receiver: userId, status: FriendRequestStatus.PENDING });
+
+        let status = 'none';
+        let requestId = null;
+        if (isFriend) {
+            status = 'friend';
+        } else if (sentRequest) {
+            status = 'sent';
+            requestId = sentRequest._id;
+        } else if (receivedRequest) {
+            status = 'received';
+            requestId = receivedRequest._id;
+        }
+
+        res.json({ status, requestId });
+    } catch (error) {
+        res.status(500).json({ message: 'Error getting friendship status', error });
+    }
+};
+
+// Cancel a sent friend request
+export const cancelFriendRequest = async (req: Request, res: Response) => {
+    try {
+        const userId = (req as any).user.userId;
+        const { requestId } = req.params;
+
+        const request = await FriendRequest.findOne({ _id: requestId, sender: userId, status: FriendRequestStatus.PENDING });
+
+        if (!request) {
+            return res.status(404).json({ message: 'Friend request not found' });
+        }
+
+        await FriendRequest.deleteOne({ _id: requestId });
+
+        res.json({ message: 'Friend request cancelled' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error cancelling friend request', error });
+    }
+};

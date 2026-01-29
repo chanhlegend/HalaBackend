@@ -7,7 +7,9 @@ import {
     rejectFriendRequest,
     unfriend,
     getSuggestions,
-    searchUserByEmail
+    searchUserByEmail,
+    getFriendshipStatus,
+    cancelFriendRequest
 } from '../controllers/FriendController';
 import { authMiddleware } from '../middlewares/authMiddleware';
 
@@ -20,8 +22,10 @@ router.get('/requests', getFriendRequests);
 router.post('/request', sendFriendRequest);
 router.post('/request/accept', acceptFriendRequest);
 router.post('/request/reject', rejectFriendRequest);
+router.delete('/request/:requestId', cancelFriendRequest);
 router.delete('/:friendId', unfriend);
 router.get('/suggestions', getSuggestions);
 router.post('/search', searchUserByEmail);
+router.get('/status/:targetUserId', getFriendshipStatus);
 
 export default router;

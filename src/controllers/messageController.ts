@@ -18,19 +18,29 @@ export const getConversations = async (req: Request, res: Response) => {
             .populate('participants', 'name email avatar')
             .sort({ updatedAt: -1 });
 
-        // Format conversations to include the other participant info
-        const formattedConversations = conversations.map(conv => {
+        // Format conversations to include the other participant info and unread count
+        const formattedConversations = await Promise.all(conversations.map(async (conv) => {
             const otherParticipant = conv.participants.find(
                 (p: any) => p._id.toString() !== userId
             );
+
+            // Count unread messages in this conversation
+            const unreadCount = await Message.countDocuments({
+                conversation: conv._id,
+                sender: { $ne: userId },
+                isRead: false,
+                isDeleted: false
+            });
+
             return {
                 _id: conv._id,
                 participant: otherParticipant,
                 lastMessage: conv.lastMessage,
                 lastMessageTime: conv.lastMessageTime,
                 updatedAt: conv.updatedAt,
+                unreadCount,
             };
-        });
+        }));
 
         res.json(formattedConversations);
     } catch (error) {

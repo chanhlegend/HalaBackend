@@ -23,7 +23,7 @@ router.post('/upload-cover', authMiddleware, upload.single('coverPhoto'), upload
 
 // Admin routes (add authentication later)
 router.get('/', getUsers);
-router.get('/:id', getUserById);
+router.get('/:id', authMiddleware, getUserById);
 router.post('/', createUser);
 router.put('/:id', updateUser);
 router.delete('/:id', deleteUser);

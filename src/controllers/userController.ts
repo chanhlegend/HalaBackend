@@ -7,9 +7,22 @@ export const getUsers = (req: Request, res: Response): void => {
   res.json({ message: 'Get all users' });
 };
 
-export const getUserById = (req: Request, res: Response): void => {
-  const { id } = req.params;
-  res.json({ message: `Get user ${id}` });
+export const getUserById = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    
+    const user = await User.findById(id).select('-password -refreshTokens -emailVerificationOTP -resetPasswordToken');
+    
+    if (!user) {
+      res.status(404).json({ message: 'Không tìm thấy người dùng' });
+      return;
+    }
+
+    res.json(user);
+  } catch (error) {
+    console.error('Get user by id error:', error);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
 };
 
 // Get current user profile
