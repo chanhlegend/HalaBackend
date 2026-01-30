@@ -1,8 +1,12 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { OAuth2Client } from 'google-auth-library';
 import User, { IUser } from '../models/User';
 import { sendOTPEmail, generateOTP } from '../utils/emailService';
+
+// Google OAuth client
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 /**
  * Register a new user
@@ -433,5 +437,104 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
     } catch (error) {
         console.error('Reset password error:', error);
         res.status(500).json({ error: 'Đã xảy ra lỗi khi đặt lại mật khẩu' });
+    }
+};
+
+/**
+ * Google Login
+ * POST /auth/google
+ */
+export const googleLogin = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { credential } = req.body;
+
+        if (!credential) {
+            res.status(400).json({ error: 'Vui lòng cung cấp Google credential' });
+            return;
+        }
+
+        // Verify Google ID token
+        const ticket = await googleClient.verifyIdToken({
+            idToken: credential,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        });
+
+        const payload = ticket.getPayload();
+
+        if (!payload) {
+            res.status(400).json({ error: 'Không thể xác thực tài khoản Google' });
+            return;
+        }
+
+        const { email, name, picture, sub: googleId } = payload;
+
+        if (!email) {
+            res.status(400).json({ error: 'Không thể lấy email từ tài khoản Google' });
+            return;
+        }
+
+        // Check if user exists
+        let user = await User.findOne({ email: email.toLowerCase() });
+
+        if (user) {
+            // Update Google ID if not set
+            if (!user.googleId) {
+                user.googleId = googleId;
+            }
+            // Update avatar if not set
+            if (!user.avatar && picture) {
+                user.avatar = picture;
+            }
+        } else {
+            // Create new user
+            user = new User({
+                name: name || email.split('@')[0],
+                email: email.toLowerCase(),
+                googleId,
+                avatar: picture,
+                isEmailVerified: true, // Google accounts are already verified
+                password: '', // No password for Google accounts
+            });
+        }
+
+        // Generate tokens
+        const jwtSecret = (process.env.JWT_SECRET || 'your_jwt_secret_key_here') as jwt.Secret;
+        const jwtExpire = (process.env.JWT_EXPIRE || '7d') as string;
+
+        const accessToken = jwt.sign(
+            { userId: user._id, email: user.email },
+            jwtSecret,
+            { expiresIn: '1h' }
+        );
+
+        const refreshToken = jwt.sign(
+            { userId: user._id },
+            jwtSecret,
+            { expiresIn: jwtExpire as any }
+        );
+
+        // Save refresh token
+        user.refreshTokens.push(refreshToken);
+        user.lastLogin = new Date();
+        await user.save();
+
+        res.json({
+            message: 'Đăng nhập Google thành công',
+            accessToken,
+            refreshToken,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                avatar: user.avatar,
+            },
+        });
+    } catch (error: any) {
+        console.error('Google login error:', error);
+        if (error.message?.includes('Token used too late') || error.message?.includes('Token used too early')) {
+            res.status(400).json({ error: 'Token Google đã hết hạn, vui lòng thử lại' });
+            return;
+        }
+        res.status(500).json({ error: 'Đã xảy ra lỗi khi đăng nhập bằng Google' });
     }
 };

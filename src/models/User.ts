@@ -39,7 +39,7 @@ const userSchema: Schema = new Schema<IUser>(
     },
     password: {
       type: String,
-      required: true,
+      required: false,
       minlength: 6,
     },
     phone: {
