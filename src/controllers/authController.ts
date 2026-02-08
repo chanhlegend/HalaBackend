@@ -453,6 +453,12 @@ export const googleLogin = async (req: Request, res: Response): Promise<void> =>
             return;
         }
 
+        if (!process.env.GOOGLE_CLIENT_ID) {
+            console.error('GOOGLE_CLIENT_ID not set in environment variables');
+            res.status(500).json({ error: 'Server configuration error' });
+            return;
+        }
+
         // Verify Google ID token
         const ticket = await googleClient.verifyIdToken({
             idToken: credential,
@@ -530,11 +536,23 @@ export const googleLogin = async (req: Request, res: Response): Promise<void> =>
             },
         });
     } catch (error: any) {
-        console.error('Google login error:', error);
+        console.error('Google login error:', {
+            message: error.message,
+            code: error.code,
+            details: error.details,
+        });
+        
         if (error.message?.includes('Token used too late') || error.message?.includes('Token used too early')) {
             res.status(400).json({ error: 'Token Google đã hết hạn, vui lòng thử lại' });
             return;
         }
-        res.status(500).json({ error: 'Đã xảy ra lỗi khi đăng nhập bằng Google' });
+        
+        if (error.message?.includes('invalid audience')) {
+            console.error('Google Client ID mismatch. Expected:', process.env.GOOGLE_CLIENT_ID);
+            res.status(400).json({ error: 'Google credential không hợp lệ (audience mismatch)' });
+            return;
+        }
+        
+        res.status(500).json({ error: 'Đã xảy ra lỗi khi đăng nhập bằng Google: ' + error.message });
     }
 };
