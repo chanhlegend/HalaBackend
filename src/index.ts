@@ -22,7 +22,17 @@ connectDB();
 socketService.initialize(httpServer);
 
 // Middleware
-app.use(cors());
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5000',
+  process.env.FRONTEND_URL, 
+  process.env.BACKEND_URL,  
+].filter((url): url is string => Boolean(url));
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
