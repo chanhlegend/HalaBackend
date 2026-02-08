@@ -102,6 +102,9 @@ export const initiateCall = async (req: Request, res: Response) => {
             );
         }
 
+        // Register the call as pending (will be confirmed on accept)
+        socketService.registerCall(callerId, receiverId, channelName);
+
         // Send call notification to receiver via socket
         socketService.emitToUser(receiverId, 'incoming_call', {
             callerId,
@@ -136,7 +139,7 @@ export const acceptCall = async (req: Request, res: Response) => {
 
         // Notify caller that call was accepted
         socketService.emitToUser(callerId, 'call_accepted', {
-            oderId: userId,
+            userId,
             userName,
             userAvatar,
             channelName,
@@ -157,6 +160,9 @@ export const rejectCall = async (req: Request, res: Response) => {
     try {
         const userId = (req as any).user.userId;
         const { callerId, reason = 'rejected' } = req.body;
+
+        // Remove the pending call
+        socketService.removeCallByUserId(userId);
 
         // Notify caller that call was rejected
         socketService.emitToUser(callerId, 'call_rejected', {
@@ -180,9 +186,12 @@ export const endCall = async (req: Request, res: Response) => {
         const userId = (req as any).user.userId;
         const { otherId } = req.body;
 
+        // Remove the active call
+        socketService.removeCallByUserId(userId);
+
         // Notify the other party that call ended
         socketService.emitToUser(otherId, 'call_ended', {
-            oderId: userId,
+            userId,
         });
 
         res.json({ message: 'Call ended' });
