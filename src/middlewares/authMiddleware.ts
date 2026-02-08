@@ -18,15 +18,20 @@ export const authMiddleware = (
     next: NextFunction
 ): void => {
     try {
-        // Get token from header
+        // Get token from header or query string (query string used by sendBeacon on page unload)
         const authHeader = req.headers.authorization;
+        let token: string | undefined;
 
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            token = authHeader.substring(7); // Remove 'Bearer ' prefix
+        } else if (req.query.token && typeof req.query.token === 'string') {
+            token = req.query.token;
+        }
+
+        if (!token) {
             res.status(401).json({ error: 'Không có token xác thực' });
             return;
         }
-
-        const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
         // Verify token
         try {
